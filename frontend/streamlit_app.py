@@ -33,6 +33,87 @@ def get_auth_headers() -> dict[str, str]:
     return {}
 
 
+def format_api_error(res: requests.Response, default_msg: str = "An error occurred") -> str:
+    """Transforms raw API error responses and Pydantic validation errors into clean, friendly text.
+    Never exposes raw JSON payloads, Pydantic internal structures, or stack traces.
+    """
+    status = res.status_code
+
+    # 401 Unauthorized
+    if status == 401:
+        return "Incorrect email or password"
+
+    # 403 Forbidden
+    if status == 403:
+        return "You don't have permission for this action"
+
+    # 409 Conflict (duplicate email)
+    if status == 409:
+        return "This email is already registered"
+
+    # 429 Rate Limit Exceeded
+    if status == 429:
+        return "Too many requests, please wait a minute"
+
+    # 5xx Server Errors
+    if status >= 500:
+        return "Service temporarily unavailable, please try again"
+
+    # Extract JSON body safely
+    try:
+        body = res.json()
+    except Exception:
+        return default_msg
+
+    detail = body.get("detail") if isinstance(body, dict) else None
+
+    # 422 Unprocessable Entity: parse FastAPI / Pydantic validation error list
+    if status == 422 and isinstance(detail, list):
+        field_messages: list[str] = []
+        for item in detail:
+            if isinstance(item, dict):
+                loc = item.get("loc", [])
+                field_raw = str(loc[-1]) if loc else "Field"
+                field_name = field_raw.replace("_", " ").capitalize()
+
+                raw_msg = str(item.get("msg", "invalid input"))
+                msg_lower = raw_msg.lower()
+
+                # Transform standard Pydantic phrasing into conversational guidance
+                if "value is not a valid email address" in msg_lower or "valid email" in msg_lower:
+                    clean_msg = "please enter a valid email address"
+                elif "at least" in msg_lower and "character" in msg_lower:
+                    clean_msg = "must be at least 8 characters"
+                elif "field required" in msg_lower or "missing" in msg_lower:
+                    clean_msg = "this field is required"
+                elif "value error, " in msg_lower:
+                    clean_msg = raw_msg.split("value error, ", 1)[-1].strip()
+                elif "assertion error, " in msg_lower:
+                    clean_msg = raw_msg.split("assertion error, ", 1)[-1].strip()
+                else:
+                    clean_msg = raw_msg.strip()
+
+                field_messages.append(f"{field_name}: {clean_msg}")
+            elif isinstance(item, str):
+                field_messages.append(item)
+
+        if field_messages:
+            return "\n\n".join(field_messages)
+
+    # String detail fallback for other 4xx responses
+    if isinstance(detail, str):
+        detail_lower = detail.lower()
+        if "already registered" in detail_lower or "duplicate" in detail_lower:
+            return "This email is already registered"
+        if "incorrect" in detail_lower or "invalid email or password" in detail_lower:
+            return "Incorrect email or password"
+        if "permission" in detail_lower or "inactive" in detail_lower:
+            return "You don't have permission for this action"
+        return detail
+
+    return default_msg
+
+
 # ---------------------------------------------------------
 # Sidebar: Auth & Configuration
 # ---------------------------------------------------------
@@ -100,9 +181,9 @@ with st.sidebar:
                             st.success("Successfully logged in!")
                             st.rerun()
                         else:
-                            st.error(res.json().get("detail", "Authentication failed."))
-                    except Exception as exc:
-                        st.error(f"Connection error: {str(exc)}")
+                            st.error(format_api_error(res, "Authentication failed. Please check your credentials."))
+                    except Exception:
+                        st.error("Service temporarily unavailable, please try again.")
 
         else:
             with st.form("register_form"):
@@ -121,9 +202,9 @@ with st.sidebar:
                         if res.status_code == 201:
                             st.success("Account created successfully! Please sign in.")
                         else:
-                            st.error(res.json().get("detail", "Registration failed."))
-                    except Exception as exc:
-                        st.error(f"Connection error: {str(exc)}")
+                            st.error(format_api_error(res, "Registration failed."))
+                    except Exception:
+                        st.error("Service temporarily unavailable, please try again.")
 
     st.divider()
     st.markdown("### 📌 Features")
@@ -200,16 +281,19 @@ with tab_chat:
                                 comment = st.text_input("Comments (optional)", max_chars=500)
                                 submit_fb = st.form_submit_button("Submit Feedback")
                                 if submit_fb:
-                                    fb_res = requests.post(
-                                        f"{st.session_state.api_url}/feedback/",
-                                        headers=get_auth_headers(),
-                                        json={"message_id": msg_id, "rating": rating, "comment": comment},
-                                        timeout=5,
-                                    )
-                                    if fb_res.status_code == 201:
-                                        st.success("Thank you for your feedback!")
-                                    else:
-                                        st.error(fb_res.json().get("detail", "Failed to submit feedback."))
+                                    try:
+                                        fb_res = requests.post(
+                                            f"{st.session_state.api_url}/feedback/",
+                                            headers=get_auth_headers(),
+                                            json={"message_id": msg_id, "rating": rating, "comment": comment},
+                                            timeout=5,
+                                        )
+                                        if fb_res.status_code == 201:
+                                            st.success("Thank you for your feedback!")
+                                        else:
+                                            st.error(format_api_error(fb_res, "Failed to submit feedback."))
+                                    except Exception:
+                                        st.error("Service temporarily unavailable, please try again.")
 
         # Chat input box
         user_query = st.chat_input("Ask a weather or safety question (e.g. 'What is the temperature in Delhi?' or 'What is a heatwave?')")
@@ -240,16 +324,16 @@ with tab_chat:
                         })
                         st.rerun()
                     else:
-                        err_text = chat_res.json().get("detail", f"Server error ({chat_res.status_code})")
+                        err_text = format_api_error(chat_res, "Service temporarily unavailable, please try again.")
                         st.session_state.messages.append({
                             "role": "assistant",
                             "content": f"⚠️ **Error:** {err_text}",
                         })
                         st.rerun()
-                except Exception as exc:
+                except Exception:
                     st.session_state.messages.append({
                         "role": "assistant",
-                        "content": f"⚠️ **Connection Error:** Could not contact backend: {str(exc)}",
+                        "content": "⚠️ **Error:** Service temporarily unavailable, please try again.",
                     })
                     st.rerun()
 
@@ -312,9 +396,9 @@ with tab_weather:
                             st.json(wdata)
 
                     else:
-                        st.error(res.json().get("detail", f"Weather request failed ({res.status_code})"))
-                except Exception as exc:
-                    st.error(f"Error querying weather API: {str(exc)}")
+                        st.error(format_api_error(res, "Weather data is currently unavailable."))
+                except Exception:
+                    st.error("Service temporarily unavailable, please try again.")
 
 
 # ---------------------------------------------------------
@@ -348,9 +432,9 @@ with tab_eval:
                         bench_data = res.json()
                         st.session_state.last_bench = bench_data
                     else:
-                        st.error(res.json().get("detail", "Benchmark execution failed."))
-                except Exception as exc:
-                    st.error(f"Error executing benchmark: {str(exc)}")
+                        st.error(format_api_error(res, "Benchmark execution failed."))
+                except Exception:
+                    st.error("Service temporarily unavailable, please try again.")
 
         # Fetch recent evaluation results
         try:
@@ -368,8 +452,10 @@ with tab_eval:
                     st.dataframe(items, use_container_width=True)
                 else:
                     st.info("No benchmark results recorded yet. Click 'Run Evaluation Benchmark' above.")
-        except Exception as exc:
-            st.error(f"Could not load evaluation records: {str(exc)}")
+            else:
+                st.error(format_api_error(hist_res, "Could not load evaluation records."))
+        except Exception:
+            st.error("Service temporarily unavailable, please try again.")
 
 
 # ---------------------------------------------------------
