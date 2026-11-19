@@ -84,9 +84,6 @@ services:
   # 4. Streamlit Interactive Frontend UI
   # -------------------------------------------------------------
   frontend:
-    build:
-      context: .
-      dockerfile: Dockerfile
     image: weather_assistant_app:latest
     container_name: weather_assistant_frontend
     restart: unless-stopped
