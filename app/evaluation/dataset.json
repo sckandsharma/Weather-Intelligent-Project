@@ -1,0 +1,167 @@
+[
+  {
+    "id": 1,
+    "question": "What's the temperature in Delhi?",
+    "expected_route": "weather",
+    "expected_source": "weather",
+    "expected_location": "Delhi",
+    "needs_official_alert": false,
+    "expected_categories": [],
+    "expected_keywords": ["temperature", "delhi", "°c"],
+    "notes": "Standard current weather observation query"
+  },
+  {
+    "id": 2,
+    "question": "Will it rain in Bangalore this evening?",
+    "expected_route": "weather",
+    "expected_source": "weather",
+    "expected_location": "Bangalore",
+    "needs_official_alert": false,
+    "expected_categories": [],
+    "expected_keywords": ["rain", "bangalore"],
+    "notes": "Hourly forecast query checking evening precipitation"
+  },
+  {
+    "id": 3,
+    "question": "What's the weather in Mumbai tomorrow?",
+    "expected_route": "weather",
+    "expected_source": "weather",
+    "expected_location": "Mumbai",
+    "needs_official_alert": false,
+    "expected_categories": [],
+    "expected_keywords": ["mumbai", "tomorrow"],
+    "notes": "Daily forecast query for the next day"
+  },
+  {
+    "id": 4,
+    "question": "What is a heatwave?",
+    "expected_route": "rag",
+    "expected_source": "rag",
+    "expected_location": null,
+    "needs_official_alert": false,
+    "expected_categories": ["heatwave"],
+    "expected_keywords": ["temperature", "normal", "plains", "celsius", "departure", "40"],
+    "notes": "Pure knowledge retrieval regarding IMD/NDMA heatwave definition"
+  },
+  {
+    "id": 5,
+    "question": "What does an orange alert mean?",
+    "expected_route": "rag",
+    "expected_source": "rag",
+    "expected_location": null,
+    "needs_official_alert": false,
+    "expected_categories": ["weather_alerts"],
+    "expected_keywords": ["prepared", "disruption", "severe", "weather", "warning"],
+    "notes": "Color-coded alert definition from IMD guidelines"
+  },
+  {
+    "id": 6,
+    "question": "What precautions should people take during a cyclone?",
+    "expected_route": "rag",
+    "expected_source": "rag",
+    "expected_location": null,
+    "needs_official_alert": false,
+    "expected_categories": ["cyclone"],
+    "expected_keywords": ["indoors", "electrical", "window", "radio", "water", "eye"],
+    "notes": "NDMA cyclone safety precautions and dos/don'ts"
+  },
+  {
+    "id": 7,
+    "question": "Is hiking in Manali safe tomorrow?",
+    "expected_route": "both",
+    "expected_source": "both",
+    "expected_location": "Manali",
+    "needs_official_alert": false,
+    "expected_categories": ["hiking_safety"],
+    "expected_keywords": ["manali", "conditions", "precaution", "gear", "weather"],
+    "notes": "Requires live forecast + high-altitude mountain hiking safety guidelines"
+  },
+  {
+    "id": 8,
+    "question": "What precautions should elderly people take during Delhi's heatwave?",
+    "expected_route": "both",
+    "expected_source": "both",
+    "expected_location": "Delhi",
+    "needs_official_alert": false,
+    "expected_categories": ["heatwave"],
+    "expected_keywords": ["delhi", "elderly", "water", "indoor", "hydration", "heat"],
+    "notes": "Combines Delhi temperature metrics with NDMA vulnerable population guidelines"
+  },
+  {
+    "id": 9,
+    "question": "Should I carry an umbrella in Pune today?",
+    "expected_route": "both",
+    "expected_source": "both",
+    "expected_location": "Pune",
+    "needs_official_alert": false,
+    "expected_categories": ["rain_flood"],
+    "expected_keywords": ["pune", "umbrella", "rain", "precipitation"],
+    "notes": "Combines Pune precipitation metrics with rain safety gear guidance"
+  },
+  {
+    "id": 10,
+    "question": "Is there an official weather alert in Mumbai today?",
+    "expected_route": "both",
+    "expected_source": "both",
+    "expected_location": "Mumbai",
+    "needs_official_alert": true,
+    "expected_categories": ["weather_alerts"],
+    "expected_keywords": ["mumbai", "official alert", "verified", "forecast"],
+    "notes": "Tests official alert disclaimer mandate: live forecast is not an official alert"
+  },
+  {
+    "id": 11,
+    "question": "What's the weather in Delhii?",
+    "expected_route": "weather",
+    "expected_source": "weather",
+    "expected_location": "Delhii",
+    "needs_official_alert": false,
+    "expected_categories": [],
+    "expected_keywords": ["delhii", "could not be resolved", "spelling", "error"],
+    "notes": "Exercises geocoding 404 error path with misspelled city"
+  },
+  {
+    "id": 12,
+    "question": "Give me a forecast for a date beyond the API range.",
+    "expected_route": "weather",
+    "expected_source": "weather",
+    "expected_location": null,
+    "needs_official_alert": false,
+    "expected_categories": [],
+    "expected_keywords": ["16 days", "exceed", "supported", "range"],
+    "notes": "Exercises date validation error path (>16 days limit)"
+  },
+  {
+    "id": 13,
+    "question": "What is the difference between a cyclone and a hurricane?",
+    "expected_route": "rag",
+    "expected_source": "rag",
+    "expected_location": null,
+    "needs_official_alert": false,
+    "expected_categories": ["tropical_storms", "cyclone"],
+    "expected_keywords": ["tropical cyclone", "geographic", "ocean", "basin", "atlantic", "pacific", "indian"],
+    "notes": "Pure knowledge comparison based on NOAA terminology document"
+  },
+  {
+    "id": 14,
+    "question": "Tell me Apple's latest stock price.",
+    "expected_route": "neither",
+    "expected_source": "neither",
+    "expected_location": null,
+    "needs_official_alert": false,
+    "expected_categories": [],
+    "expected_keywords": ["specialized", "weather", "cannot", "disaster"],
+    "notes": "Out-of-scope intent test returning polite refusal"
+  },
+  {
+    "id": 15,
+    "question": "What precautions should I take tomorrow?",
+    "expected_route": "clarification",
+    "expected_source": "clarification",
+    "expected_location": null,
+    "needs_official_alert": false,
+    "expected_categories": [],
+    "expected_keywords": ["specify", "city", "location", "hazard"],
+    "notes": "Ambiguous query lacking location and hazard context, requiring clarification"
+  }
+]
